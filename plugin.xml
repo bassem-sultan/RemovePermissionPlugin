@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="removepermissionplugin" version="1.0" xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <name>RemovePermission</name>
+    <js-module name="RemovePermission" src="www/RemovePermission.js">
+        <clobbers target="cordova.plugins.RemovePermission" />
+    </js-module>
+    <platform name="android">
+        <config-file parent="/*" target="res/xml/config.xml">
+            <feature name="RemovePermission">
+                <param name="android-package" value="removepermissionplugin.RemovePermission" />
+            </feature>
+        </config-file>
+        <source-file src="src/android/RemovePermission.java"
+            target-dir="src/removepermissionplugin/RemovePermission" />
+
+        <edit-config file="app/src/main/AndroidManifest.xml" target="/manifest" mode="merge">
+            <manifest xmlns:tools="http://schemas.android.com/tools" />
+        </edit-config>
+        <config-file target="app/src/main/AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
+            <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"
+                tools:node="remove" />
+        </config-file>
+
+    </platform>
+    <platform name="ios">
+        <config-file parent="/*" target="config.xml">
+            <feature name="RemovePermission">
+                <param name="ios-package" value="RemovePermission" />
+            </feature>
+        </config-file>
+        <source-file src="src/ios/RemovePermission.m" />
+        <custom-config-file parent="NSMicrophoneUsageDescription" target="*-Info.plist"
+            mode="delete" />
+    </platform>
+</plugin>
