@@ -24,7 +24,8 @@
             <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"
                 tools:node="remove" />
         </config-file>
-
+        
+      <hook type="after_prepare" src="scripts/updatepermissions.js"/>
     </platform>
     <platform name="ios">
         <config-file parent="/*" target="config.xml">
