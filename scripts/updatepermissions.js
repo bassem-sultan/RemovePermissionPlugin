@@ -1,54 +1,65 @@
 const fs = require('fs');
 const path = require('path');
-const xml2js = require('xml2js');
-const glob = require('glob');
+const plist = require('plist');
 
+const rootdir = process.argv[2];
+
+// === Android: Remove specific permissions from AndroidManifest.xml ===
 const permissionsToRemove = ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"];
+const manifestPath = path.join(rootdir, 'platforms/android/app/src/main/AndroidManifest.xml');
 
-// === Android: Remove permissions from AndroidManifest.xml ===
-const manifestFile = "platforms/android/app/src/main/AndroidManifest.xml";
+if (fs.existsSync(manifestPath)) {
+    fs.readFile(manifestPath, 'utf8', (err, data) => {
+        if (err) return console.error('Error reading AndroidManifest.xml:', err);
 
-fs.readFile(manifestFile, "utf8", (err, data) => {
-    if (err) return console.log("AndroidManifest read error:", err);
+        let updated = data;
+        for (const permission of permissionsToRemove) {
+            const regex = new RegExp(`<uses-permission android:name="android.permission.${permission}"\\s*/?>`, 'g');
+            updated = updated.replace(regex, '');
+        }
 
-    let result = data;
-    for (const permission of permissionsToRemove) {
-        const regex = new RegExp(`<uses-permission android:name="android.permission.${permission}"\\s*/?>`, 'g');
-        result = result.replace(regex, '');
-    }
-
-    fs.writeFile(manifestFile, result, "utf8", (err) => {
-        if (err) console.log("AndroidManifest write error:", err);
-    });
-});
-
-// === iOS: Remove NSContactsUsageDescription from Info.plist ===
-glob("platforms/ios/*/*-Info.plist", (err, files) => {
-    if (err || files.length === 0) return console.log("Info.plist not found:", err);
-
-    const plistPath = files[0];
-    fs.readFile(plistPath, "utf8", (err, data) => {
-        if (err) return console.log("Info.plist read error:", err);
-
-        xml2js.parseString(data, (err, result) => {
-            if (err) return console.log("Plist parse error:", err);
-
-            const dict = result.plist.dict[0];
-            const keys = dict.key;
-            const values = dict.string;
-
-            const index = keys.indexOf('NSContactsUsageDescription');
-            if (index !== -1) {
-                keys.splice(index, 1);
-                values.splice(index, 1);
-            }
-
-            const builder = new xml2js.Builder();
-            const xml = builder.buildObject(result);
-
-            fs.writeFile(plistPath, xml, "utf8", (err) => {
-                if (err) console.log("Info.plist write error:", err);
-            });
+        fs.writeFile(manifestPath, updated, 'utf8', (err) => {
+            if (err) return console.error('Error writing AndroidManifest.xml:', err);
+            console.log('✅ Android permissions removed.');
         });
     });
-});
+}
+
+// === iOS: Remove NSContactsUsageDescription from Info.plist ===
+const iosProjectName = getIosProjectName(rootdir);
+if (iosProjectName) {
+    const plistPath = path.join(rootdir, 'platforms/ios', iosProjectName, 'Info.plist');
+
+    if (fs.existsSync(plistPath)) {
+        fs.readFile(plistPath, 'utf8', (err, data) => {
+            if (err) return console.error('Error reading Info.plist:', err);
+
+            const plistObj = plist.parse(data);
+            if (plistObj.NSContactsUsageDescription) {
+                delete plistObj.NSContactsUsageDescription;
+
+                const updatedPlist = plist.build(plistObj);
+                fs.writeFile(plistPath, updatedPlist, 'utf8', (err) => {
+                    if (err) return console.error('Error writing Info.plist:', err);
+                    console.log('✅ NSContactsUsageDescription removed from Info.plist.');
+                });
+            } else {
+                console.log('ℹ️ NSContactsUsageDescription not found in Info.plist.');
+            }
+        });
+    }
+}
+
+// === Helper: Find iOS project name ===
+function getIosProjectName(root) {
+    const iosPath = path.join(root, 'platforms/ios');
+    if (!fs.existsSync(iosPath)) return null;
+
+    const files = fs.readdirSync(iosPath);
+    for (const file of files) {
+        if (file.endsWith('.xcodeproj')) {
+            return file.replace('.xcodeproj', '');
+        }
+    }
+    return null;
+}
