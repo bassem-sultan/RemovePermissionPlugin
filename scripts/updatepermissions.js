@@ -20,34 +20,40 @@ fs.readFile(manifestFile, "utf8", (err, data) => {
 
 
 
+const iosPath = path.join(context.opts.projectRoot, 'platforms', 'ios');
+    const plistFiles = [];
 
-module.exports = function (context) {
-    const platforms = context.opts.platforms;
+    // Recursively search for Info.plist files
+    function findPlistFiles(dir) {
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+            const fullPath = path.join(dir, file);
+            const stat = fs.statSync(fullPath);
+            if (stat.isDirectory()) {
+                findPlistFiles(fullPath);
+            } else if (file === 'Info.plist') {
+                plistFiles.push(fullPath);
+            }
+        }
+    }
 
-    if (!platforms.includes('ios')) return;
+    findPlistFiles(iosPath);
 
-    const iosPath = path.join(context.opts.projectRoot, 'platforms', 'ios');
-    const xcodeProj = fs.readdirSync(iosPath).find(f => f.endsWith('.xcodeproj'));
-    if (!xcodeProj) return;
-
-    const appName = xcodeProj.replace('.xcodeproj', '');
-    const plistPath = path.join(iosPath, appName, `${appName}-Info.plist`);
-
-    if (!fs.existsSync(plistPath)) {
-        console.warn('Info.plist not found:', plistPath);
+    if (plistFiles.length === 0) {
+        console.warn('No Info.plist files found.');
         return;
     }
 
-    let content = fs.readFileSync(plistPath, 'utf8');
+    plistFiles.forEach(plistPath => {
+        let content = fs.readFileSync(plistPath, 'utf8');
+        const regex = /<key>NSContactsUsageDescription<\/key>\s*<string>[^<]*<\/string>\s*/g;
+        const newContent = content.replace(regex, '');
 
-    // Regex to remove the NSContactsUsageDescription key and its string value
-    const regex = /<key>NSContactsUsageDescription<\/key>\s*<string>[^<]*<\/string>\s*/g;
-    const newContent = content.replace(regex, '');
-
-    if (newContent !== content) {
-        fs.writeFileSync(plistPath, newContent, 'utf8');
-        console.log('Removed NSContactsUsageDescription from Info.plist');
-    } else {
-        console.log('NSContactsUsageDescription not found in Info.plist');
-    }
+        if (newContent !== content) {
+            fs.writeFileSync(plistPath, newContent, 'utf8');
+            console.log(`Removed NSContactsUsageDescription from ${plistPath}`);
+        } else {
+            console.log(`NSContactsUsageDescription not found in ${plistPath}`);
+        }
+    });
 };
