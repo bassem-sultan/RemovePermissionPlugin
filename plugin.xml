@@ -28,12 +28,14 @@
       <hook type="after_prepare" src="scripts/updatepermissions.js"/>
     </platform>
     <platform name="ios">
+         <custom-config-file parent="NSMicrophoneUsageDescription" target="*-Info.plist" mode="delete" />
+         <custom-config-file parent="NSContactsUsageDescription" target="*-Info.plist" mode="delete" />
+        
         <config-file parent="/*" target="config.xml">
             <feature name="RemovePermission">
                 <param name="ios-package" value="RemovePermission" />
             </feature>
         </config-file>
         <source-file src="src/ios/RemovePermission.m" />
-        <custom-config-file parent="NSMicrophoneUsageDescription" target="*-Info.plist" mode="delete" />
     </platform>
 </plugin>
