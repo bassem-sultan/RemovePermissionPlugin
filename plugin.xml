@@ -35,6 +35,5 @@
         </config-file>
         <source-file src="src/ios/RemovePermission.m" />
         <custom-config-file parent="NSMicrophoneUsageDescription" target="*-Info.plist" mode="delete" />
-        <custom-config-file parent="NSContactsUsageDescription" target="*-Info.plist" mode="delete" />
     </platform>
 </plugin>
